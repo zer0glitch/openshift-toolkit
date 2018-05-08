@@ -22,6 +22,8 @@ parser.add_argument('--from', action='store', dest='remote_registry', help='The 
                     required=True)
 parser.add_argument('--to', action='store', dest='local_registry', help='The location of the local repository',
                     required=True)
+parser.add_argument('--output', action='store', dest='output_file', help='The location of the tar file for output',
+                    required=False)
 parser.add_argument('--file', action='store', dest='json_file', help='A JSON formatted file with the following format:'
                                                                      '{"<tag_type>": {"<namespace>": ["image1", image2"'
                                                                      'image3]}}', required=True)
@@ -51,6 +53,9 @@ logging.getLogger('').addHandler(console)
 
 # Set the default release version incase unspecified
 release_version = '3.7'
+output_file = 'ose-images.tar'
+if options.output_file is not None:
+    output_file = options.output_file
 
 if options.ocp_version is not None:
     release_version = options.ocp_version
@@ -70,6 +75,10 @@ def generate_url_list(dictionary_key, list_to_populate):
 
 
 def get_latest_tag_from_api(url_list, tag_list, failed_image_list, version_type = None):
+#    print "url_list " + str(url_list)
+#    print "tag_list " + str(tag_list)
+#    print "failed_image_list " + str(failed_image_list)
+#    print "version_type " + str(version_type)
     session = requests.Session()
     for url in url_list:
         redhat_registry = session.get(url)
@@ -85,7 +94,9 @@ def get_latest_tag_from_api(url_list, tag_list, failed_image_list, version_type 
         # Get the latest version for a given release
         latest_tag = ''
         image_name = image_tag_dictionary['name']
+        print "xxxxx " + image_name
         for tag in image_tag_dictionary['tags']:
+            print "... the tag " + tag
             # check to see if there is a 'v' in the version tag:
             if tag.startswith('v'):
                 # This tracks the position of the splice. It assumes that you are trying to get the latest
@@ -93,9 +104,12 @@ def get_latest_tag_from_api(url_list, tag_list, failed_image_list, version_type 
                 splice_position = 4
             else:
                 splice_position = 3
-            if release_version in tag[:splice_position] or not 'openshift' in url:
+            #print release_version + " the version " 
+            print release_version + "in  spliced tag " + tag[:splice_position]
+            if (release_version in tag or release_version in tag[:splice_position]) or not 'openshift' in url:
                 # There may be a better way of getting the highest tag for a release
                 # but the list may potentially have a higher release version than what you are looking for
+                print 'the tag in here ' + tag + ' latest ' + latest_tag
                 if parse_version(tag) > parse_version(latest_tag):
                     if version_type is not None:
                         if "v" in tag:
@@ -104,9 +118,11 @@ def get_latest_tag_from_api(url_list, tag_list, failed_image_list, version_type 
                             latest_tag = tag
                     else:
                         latest_tag = tag
+        print 'latest_tag ' + latest_tag
         # We want to remove everything after the hyphen because we don't care about release versions
         latest_tag_minus_hyphon = latest_tag.split('-')[0]
         # If the tag has successfully removed a hyphen, it will be unicode, otherwise it will be a string
+        print latest_tag_minus_hyphon
         if type(latest_tag_minus_hyphon) is not unicode:
             logging.error("Unable to properly parse the version for image: %s" % image_name)
             logging.error("Are you sure that the version exists in the RedHat registry?")
@@ -136,6 +152,7 @@ def dry_run_print_docker_commands(remote_registry, local_registry, image_name):
 
 
 def pull_images(remote_registry, image_name):
+    print("docker pull %s/%s" % (remote_registry, image_name))
     logging.info("Pulling %s/%s" % (remote_registry, image_name.strip()))
     exit_with_error = False
     for pulled_image in generate_realtime_output(["docker", "pull", "%s/%s" % (remote_registry,
@@ -178,7 +195,7 @@ logging.info("Total images to download: %s" % total_number_of_images_to_download
 # Generate initial array list if local registry is a tar file
 #
 if options.local_registry == 'tar':
-    cmd = ['docker','save','-o', 'ose3-images.tar']
+    cmd = ['docker','save','-o', output_file]
 
 for namespace_and_image in latest_tag_list:
     if options.dry_run:
