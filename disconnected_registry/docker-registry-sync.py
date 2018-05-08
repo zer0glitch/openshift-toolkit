@@ -75,10 +75,6 @@ def generate_url_list(dictionary_key, list_to_populate):
 
 
 def get_latest_tag_from_api(url_list, tag_list, failed_image_list, version_type = None):
-#    print "url_list " + str(url_list)
-#    print "tag_list " + str(tag_list)
-#    print "failed_image_list " + str(failed_image_list)
-#    print "version_type " + str(version_type)
     session = requests.Session()
     for url in url_list:
         redhat_registry = session.get(url)
@@ -94,9 +90,7 @@ def get_latest_tag_from_api(url_list, tag_list, failed_image_list, version_type 
         # Get the latest version for a given release
         latest_tag = ''
         image_name = image_tag_dictionary['name']
-        print "xxxxx " + image_name
         for tag in image_tag_dictionary['tags']:
-            print "... the tag " + tag
             # check to see if there is a 'v' in the version tag:
             if tag.startswith('v'):
                 # This tracks the position of the splice. It assumes that you are trying to get the latest
@@ -104,12 +98,9 @@ def get_latest_tag_from_api(url_list, tag_list, failed_image_list, version_type 
                 splice_position = 4
             else:
                 splice_position = 3
-            #print release_version + " the version " 
-            print release_version + "in  spliced tag " + tag[:splice_position]
             if (release_version in tag or release_version in tag[:splice_position]) or not 'openshift' in url:
                 # There may be a better way of getting the highest tag for a release
                 # but the list may potentially have a higher release version than what you are looking for
-                print 'the tag in here ' + tag + ' latest ' + latest_tag
                 if parse_version(tag) > parse_version(latest_tag):
                     if version_type is not None:
                         if "v" in tag:
@@ -118,11 +109,9 @@ def get_latest_tag_from_api(url_list, tag_list, failed_image_list, version_type 
                             latest_tag = tag
                     else:
                         latest_tag = tag
-        print 'latest_tag ' + latest_tag
         # We want to remove everything after the hyphen because we don't care about release versions
         latest_tag_minus_hyphon = latest_tag.split('-')[0]
         # If the tag has successfully removed a hyphen, it will be unicode, otherwise it will be a string
-        print latest_tag_minus_hyphon
         if type(latest_tag_minus_hyphon) is not unicode:
             logging.error("Unable to properly parse the version for image: %s" % image_name)
             logging.error("Are you sure that the version exists in the RedHat registry?")
