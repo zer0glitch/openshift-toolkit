@@ -29,9 +29,9 @@ parser.add_argument('--file', action='store', dest='json_file', help='A JSON for
                                                                      'image3]}}', required=True)
 parser.add_argument('--dry-run', action='store_true', dest='dry_run', help='If this flag is present, commands will be'
                                                                          'dumped to stdout instead of run')
-parser.add_argument('--openshift-version', action='store', dest='ocp_version', help='The version of OpenShift which you '
+parser.add_argument('--openshift-version', action='store', dest='ocp_version', help='The version of OpenShift which you ', required=False)
 
-parser.add_argument('--use-exact-version', action='store', dest='use_exact_version', help=' Use the version passed. do not grab the latest')
+parser.add_argument('--use-exact-version', action='store', dest='use_exact', help='Use the exact version passed', required=False)
 
 options = parser.parse_args()
 
@@ -57,6 +57,9 @@ release_version = '3.7'
 output_file = 'ose-images.tar'
 if options.output_file is not None:
     output_file = options.output_file
+
+if options.use_exact is not None:
+    use_exact_version = options.use_exact
 
 if options.ocp_version is not None:
     release_version = options.ocp_version
